@@ -1,0 +1,3 @@
+include ':flipper-backstack'
+include ':app'
+rootProject.name = "Flipper Android Backstack"
