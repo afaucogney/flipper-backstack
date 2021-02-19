@@ -1,4 +1,4 @@
-package fr.niji.mobile.flipper
+package fr.afaucogney.mobile.flipper
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -6,17 +6,24 @@ import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStore
 import androidx.navigation.fragment.findNavController
 import com.facebook.flipper.core.FlipperArray
 import com.facebook.flipper.core.FlipperConnection
 import com.facebook.flipper.core.FlipperObject
 import com.facebook.flipper.core.FlipperPlugin
+import fr.afaucogney.mobile.flipper.internal.util.getPrivateProperty
+import kotlin.reflect.KVisibility
+import kotlin.reflect.full.memberProperties
 
-class FlipperFragmentManagerPlugin(app: Application) :
+class BackStackFlipperPlugin(app: Application) :
     Application.ActivityLifecycleCallbacks,
     FragmentLifecycleCallbacks(),
     FlipperPlugin {
@@ -49,7 +56,7 @@ class FlipperFragmentManagerPlugin(app: Application) :
      */
     override fun onConnect(connection: FlipperConnection?) {
         this.connection = connection
-        activityMap.forEach { (_, u) -> connection?.send("newData", u.build()) }
+//        activityMap.forEach { (_, u) -> connection?.send("newData", u.build()) }
     }
 
     /**
@@ -80,21 +87,22 @@ class FlipperFragmentManagerPlugin(app: Application) :
         const val BACK_STACK = "backStack"
         const val NEW_DATA = "newData"
         const val TRASH = "trash"
+        const val VIEWMODELS = "viewmodels"
     }
 
     private enum class FlipperObjectType {
         ACTIVITY,
-        FRAGMENT
+        FRAGMENT,
+        VIEWMODEL,
     }
 
     private val FlipperObjectType.key: String
         get() = this.toString().toLowerCase()
 
     ///////////////////////////////////////////////////////////////////////////
-    // DOMAIN
+    // ACTIVITY
     ///////////////////////////////////////////////////////////////////////////
 
-    // Activity
     private val Activity.name: String
         get() = this.javaClass.simpleName
 
@@ -120,7 +128,10 @@ class FlipperFragmentManagerPlugin(app: Application) :
     private val ActivityLifeCycle.key: String
         get() = this.toString().toLowerCase()
 
-    // Fragment
+    ///////////////////////////////////////////////////////////////////////////
+    // FRAGMENT
+    ///////////////////////////////////////////////////////////////////////////
+
     private val Fragment.name: String
         get() = this.javaClass.simpleName
 
@@ -153,13 +164,47 @@ class FlipperFragmentManagerPlugin(app: Application) :
 
     private val trashMap = FlipperArray.Builder()
     private val activityMap = mutableMapOf<String, FlipperObject.Builder>()
+    private val activityViewModelMap = mutableMapOf<String, FlipperObject.Builder>()
 
     //    private val fragmentMap = mutableMapOf<String, Map<String, FlipperObject.Builder>>()
     private val fragmentMap = mutableMapOf<String, HashMap<String, FlipperObject.Builder>>()
+    private val fragmentViewModelMap =
+        mutableMapOf<String, HashMap<String, FlipperObject.Builder>>()
 
     private val backStackListener = FragmentManager.OnBackStackChangedListener {
 
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // VIEW MODEL
+    ///////////////////////////////////////////////////////////////////////////
+
+    // ViewModel
+    private val ViewModel.name: String
+        get() = this.javaClass.simpleName
+
+    private val ViewModel.fullName: String
+        get() = this.toString()
+
+    private val ViewModel.fid: String
+        get() = this.fullName.let {
+            when {
+                it.contains("@") -> it.split("@")[1]
+                it.contains("""\{.*\}""".toRegex()) -> it.split("{")[1].split("}")[0]
+                else -> it
+            }
+        }
+
+    private val ViewModel.type: String
+        get() = FlipperObjectType.VIEWMODEL.key
+
+    private enum class ViewModelLifeCycle {
+        ON_VIEWMODEL_CREATED,
+        ON_VIEWMODEL_CLEARED,
+    }
+
+    private val ViewModelLifeCycle.key: String
+        get() = this.toString().toLowerCase()
 
     ///////////////////////////////////////////////////////////////////////////
     // FLIPPER TRANSMISSION
@@ -202,7 +247,7 @@ class FlipperFragmentManagerPlugin(app: Application) :
             .put(FID, this.fid)
             .put(NAME, this.name)
             .put(FULL_NAME, this.fullName)
-            .put(TYPE, FlipperObjectType.ACTIVITY.key)
+            .put(TYPE, this.type)
     }
 
     private fun FlipperObject.Builder.addLifeCycleEvent(event: ActivityLifeCycle?): FlipperObject.Builder {
@@ -224,24 +269,99 @@ class FlipperFragmentManagerPlugin(app: Application) :
         }
     }
 
+    private fun FlipperObject.Builder.addViewModelInfo(activity: Activity): FlipperObject.Builder {
+        return this.apply {
+            val activityViewModels = FlipperObject.Builder()
+            if (activity is AppCompatActivity) {
+                activity
+                    .viewModelStore
+                    .getPrivateProperty<ViewModelStore, HashMap<String, ViewModel>>("mMap")
+                    ?.forEach {
+                        activityViewModels.put(
+                            it.value.name,
+                            FlipperObject
+                                .Builder()
+                                .put(
+                                    it.value.fid,
+                                    it.value
+                                        .toFlipperObjectBuilder()
+                                        .put(
+                                            LIFE_CYCLE_EVENT,
+                                            ViewModelLifeCycle.ON_VIEWMODEL_CREATED.key
+                                        )
+                                        .addViewModelsMembers(it.value)
+                                )
+                        )
+                    }
+                put(VIEWMODELS, activityViewModels)
+            }
+        }
+    }
+
+    private fun FlipperObject.Builder.addViewModelInfo(fragment: Fragment): FlipperObject.Builder {
+        return this.apply {
+            val fragmentsViewModels = FlipperObject.Builder()
+            fragment
+                .viewModelStore
+                .getPrivateProperty<ViewModelStore, HashMap<String, ViewModel>>("mMap")
+                ?.forEach {
+                    fragmentsViewModels.put(
+                        it.value.name,
+                        FlipperObject
+                            .Builder()
+                            .put(
+                                it.value.fid,
+                                it.value
+                                    .toFlipperObjectBuilder()
+                                    .put(
+                                        LIFE_CYCLE_EVENT,
+                                        ViewModelLifeCycle.ON_VIEWMODEL_CREATED.key
+                                    )
+                                    .addViewModelsMembers(it.value)
+                            )
+                    )
+                }
+            put(VIEWMODELS, fragmentsViewModels)
+        }
+    }
+
+    private fun ViewModel.toFlipperObjectBuilder(): FlipperObject.Builder {
+        return FlipperObject.Builder()
+            .put(FID, this.fid)
+            .put(NAME, this.name)
+            .put(FULL_NAME, this.fullName)
+            .put(TYPE, this.type)
+    }
+
     private fun Activity.saveAndMapToFlipperObjectBuilder(event: ActivityLifeCycle? = null): FlipperObject.Builder {
         if (!activityMap.containsKey(this.fid)) {
             activityMap[this.fid] = this.toFlipperObjectBuilder()
         }
-        return activityMap[this.fid]!!
-            .addLifeCycleEvent(event)
-            .addBackStackInfo(this)
-            .put(FRAGMENTS, fragmentMap.toFO())
-            .let {
+        return FlipperObject.Builder()
+            .put(
+                this.application.javaClass.simpleName,
                 FlipperObject.Builder()
-                    .put(this.fid, it)
+                    .put(
+                        "activities",
+                        activityMap[this.fid]!!
+                            .addLifeCycleEvent(event)
+                            .addBackStackInfo(this)
+                            .addViewModelInfo(this)
+                            .put(FRAGMENTS, fragmentMap.toFO())
+                            .let {
+                                FlipperObject.Builder()
+                                    .put(this.fid, it)
 
-            }
-            .let {
-                FlipperObject.Builder()
-                    .put(this.name, it)
-                    .put(TRASH, trashMap)
-            }
+                            }
+                            .let {
+                                FlipperObject.Builder()
+                                    .put(this.name, it)
+                                    .put(TRASH, trashMap)
+                            }
+                    )
+                    .put("jobs","N/A")
+                    .put("services","N/A")
+            )
     }
 //
 //    private fun Activity.toFlipperObject(event: ActivityLifeCycle? = null): FlipperObject.Builder {
@@ -273,7 +393,7 @@ class FlipperFragmentManagerPlugin(app: Application) :
             .put(FID, this.fid)
             .put(NAME, this.name)
             .put(FULL_NAME, this.fullName)
-            .put(TYPE, FlipperObjectType.FRAGMENT.key)
+            .put(TYPE, this.type)
     }
 
     private fun FlipperObject.Builder.addLifeCycleEvent(event: FragmentLifeCycle): FlipperObject.Builder {
@@ -310,6 +430,7 @@ class FlipperFragmentManagerPlugin(app: Application) :
         return this.toFlipperObjectBuilder()
             .addLifeCycleEvent(event)
             .addNavBackStack(this)
+            .addViewModelInfo(this)
             .also { builder ->
                 if (!fragmentMap.containsKey(this.name)) {
                     fragmentMap[this.name] = hashMapOf(this.fid to builder)
@@ -369,6 +490,9 @@ class FlipperFragmentManagerPlugin(app: Application) :
         if (activity is FragmentActivity) {
             registerFragmentLifecycleCallback(activity)
             registerFragmentBackStackLifecycleCallback(activity)
+        }
+        if (activity is AppCompatActivity) {
+            (activity as AppCompatActivity).viewModelStore
         }
     }
 
@@ -472,5 +596,32 @@ class FlipperFragmentManagerPlugin(app: Application) :
             f.moveToTrash()
             f.requireActivity().saveAndMapToFlipperObjectBuilder().build().send()
         }
+    }
+
+    private fun FlipperObject.Builder.addViewModelsMembers(viewModel: ViewModel): FlipperObject.Builder {
+        val viewModelMembers = FlipperObject.Builder()
+        viewModel::class
+            .memberProperties
+            .filter { it.visibility == KVisibility.PUBLIC }
+            .forEach {
+                viewModelMembers.put(
+                    it.name,
+                    FlipperObject.Builder()
+                        .put("visibility", it.visibility)
+                        .put("mutability", it.toString().split(" ").first())
+                        .put("type", it.returnType)
+                        .put("value", it.getter.call(viewModel).let {
+                            when (it) {
+                                is LiveData<*> -> it.value
+                                else -> it.toString()
+                            }
+                        })
+                )
+            }
+
+        return this.put(
+            "members",
+            viewModelMembers
+        )
     }
 }

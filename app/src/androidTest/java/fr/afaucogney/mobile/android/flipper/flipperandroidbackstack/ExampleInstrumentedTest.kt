@@ -1,4 +1,4 @@
-package fr.niji.mobile.android.flipper.flipperandroidbackstack
+package fr.afaucogney.mobile.android.flipper.flipperandroidbackstack
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

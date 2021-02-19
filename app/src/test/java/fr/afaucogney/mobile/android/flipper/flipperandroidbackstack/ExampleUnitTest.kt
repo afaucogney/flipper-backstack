@@ -1,4 +1,4 @@
-package fr.niji.mobile.android.flipper.flipperandroidbackstack
+package fr.afaucogney.mobile.android.flipper.flipperandroidbackstack
 
 import org.junit.Test
 
