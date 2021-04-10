@@ -17,6 +17,11 @@ import fr.afaucogney.mobile.flipper.internal.model.*
 import fr.afaucogney.mobile.flipper.internal.model.ActivityLifeCycle
 import fr.afaucogney.mobile.flipper.internal.model.FragmentLifeCycle
 import fr.afaucogney.mobile.flipper.internal.model.name
+import java.sql.Time
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 
 class BackStackFlipperPlugin(app: Application) :
     FlipperActivityCallback.IActivityLifeCycleCallbackFlipperHandler,
@@ -30,6 +35,7 @@ class BackStackFlipperPlugin(app: Application) :
     private var connection: FlipperConnection? = null
     private val fragmentCallback = FlipperFragmentCallback(this)
     private val activityCallback = FlipperActivityCallback(this)
+    private val timeStampFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.FRANCE)
 
     ///////////////////////////////////////////////////////////////////////////
     // CONSTRUCTOR
@@ -79,6 +85,7 @@ class BackStackFlipperPlugin(app: Application) :
     private val activityMap = mutableMapOf<String, FlipperObject.Builder>()
     private val fragmentMap = mutableMapOf<String, HashMap<String, FlipperObject.Builder>>()
     private val trashMap = FlipperArray.Builder()
+    private val eventList = FlipperArray.Builder()
 
     ///////////////////////////////////////////////////////////////////////////
     // OPTION
@@ -125,6 +132,9 @@ class BackStackFlipperPlugin(app: Application) :
         activity
             .saveAndMapToFlipperObjectBuilder(event)
             .send()
+        activity
+            .saveEvent(event)
+            .sendEvent()
     }
 
     override fun pushFragmentEvent(
@@ -134,6 +144,9 @@ class BackStackFlipperPlugin(app: Application) :
         fragment
             .saveAndMapToFlipperObjectBuilder(event)
             .send()
+        fragment
+            .saveEvent(event)
+            .sendEvent()
     }
 
     override fun moveToTrashAndUpdate(fragment: Fragment) {
@@ -146,6 +159,10 @@ class BackStackFlipperPlugin(app: Application) :
 
     private fun FlipperObject.Builder.send() {
         this.build().apply { connection?.send(NEW_DATA, this) }
+    }
+
+    private fun FlipperArray.Builder.sendEvent() {
+        this.build().apply { connection?.send(NEW_EVENT, this) }
     }
 
     private fun MutableMap<String, HashMap<String, FlipperObject.Builder>>.toFlipperObjectBuilder(): FlipperObject.Builder {
@@ -201,6 +218,19 @@ class BackStackFlipperPlugin(app: Application) :
             )
     }
 
+    private fun Activity.saveEvent(event: ActivityLifeCycle): FlipperArray.Builder {
+        return FlipperObject.Builder()
+            .put(
+                TIMESTAMP,
+                timeStampFormatter.format(System.currentTimeMillis())
+            )
+            .put(TYPE, this.type)
+            .put(NAME, this.name)
+            .put(FID, this.fid)
+            .put(LIFE_CYCLE_EVENT, event)
+            .let { eventList.put(it) }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // FRAGMENT
     ///////////////////////////////////////////////////////////////////////////
@@ -229,6 +259,19 @@ class BackStackFlipperPlugin(app: Application) :
                 this.requireActivity()
                     .saveAndMapToFlipperObjectBuilder()
             }
+    }
+
+    private fun Fragment.saveEvent(event: FragmentLifeCycle): FlipperArray.Builder {
+        return FlipperObject.Builder()
+            .put(
+                TIMESTAMP,
+                timeStampFormatter.format(System.currentTimeMillis())
+            )
+            .put(TYPE, this.type)
+            .put(NAME, this.name)
+            .put(FID, this.fid)
+            .put(LIFE_CYCLE_EVENT, event)
+            .let { eventList.put(it) }
     }
 
     ///////////////////////////////////////////////////////////////////////////

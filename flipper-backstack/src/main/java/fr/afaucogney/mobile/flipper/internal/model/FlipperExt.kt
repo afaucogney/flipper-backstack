@@ -9,7 +9,9 @@ const val FID = "id"
 const val NAME = "name"
 const val FULL_NAME = "fullName"
 const val TYPE = "type"
+
 const val NEW_DATA = "newData"
+const val NEW_EVENT = "newEvent"
 
 const val LIFE_CYCLE_EVENT = "lifeCycle"
 const val BACK_STACK = "backStack"
@@ -21,6 +23,8 @@ const val VIEW_MODELS = "viewModels"
 const val JOBS = "jobs"
 const val SERVICES = "services"
 const val MEMBERS = "members"
+
+const val TIMESTAMP = "timestamp"
 
 internal fun Activity.toFlipperObjectBuilder(): FlipperObject.Builder {
     return FlipperObject.Builder()

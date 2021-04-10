@@ -1,5 +1,10 @@
+# 0.4.0
+- Add log side windows with events of Activities and Fragments
+- Update deps of Desktop Plugin
+- Update deps of Client Plugin
+
 # 0.3.0
-- General code base structuration
+- General code base structure
 
 # 0.2.0
 - Add JetPack BackStacks
