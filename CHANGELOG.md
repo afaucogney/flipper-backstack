@@ -1,3 +1,7 @@
+# 0.4.1
+- Add filtering for event logs
+- Add filtering menu for object strcuture (wip)
+
 # 0.4.0
 - Add log side windows with events of Activities and Fragments
 - Update deps of Desktop Plugin
