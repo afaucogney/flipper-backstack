@@ -28,3 +28,16 @@ git pull
 yarn
 yarn start
 ```
+
+
+## Update version on JitPack
+
+- Update version number on build.gradle
+- Git commit, push
+
+- Delete binary and lock file in destkop plugin
+- npm install --force
+- (npm pack)
+- Git commit, push
+- npm login
+- npm publish
