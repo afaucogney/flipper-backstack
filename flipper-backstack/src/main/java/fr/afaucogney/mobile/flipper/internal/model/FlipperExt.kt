@@ -10,21 +10,29 @@ const val NAME = "name"
 const val FULL_NAME = "fullName"
 const val TYPE = "type"
 
-const val NEW_DATA = "newData"
-const val NEW_EVENT = "newEvent"
+const val NEW_DATA_KEY = "newData"
+const val NEW_EVENT_KEY = "newEvent"
+const val FILTER_OPTION_KEY = "newTreeFilterOptions"
+
+const val FILTER_OBJECT_TREE_KEY = "options"
 
 const val LIFE_CYCLE_EVENT = "lifeCycle"
 const val BACK_STACK = "backStack"
-const val TRASH = "trash"
+const val TRASH = "Trash"
 
-const val ACTIVITIES = "activities"
-const val FRAGMENTS = "fragments"
-const val VIEW_MODELS = "viewModels"
-const val JOBS = "jobs"
-const val SERVICES = "services"
-const val MEMBERS = "members"
+const val APPLICATION = "Application"
+const val ACTIVITIES = "Activities"
+const val FRAGMENTS = "Fragments"
+const val VIEW_MODELS = "ViewModels"
+const val JOBS = "Jobs"
+const val SERVICES = "Services"
+const val MEMBERS = "LiveDatas"
+const val JETPACK_BACKSTACK = "JetPackBackStack"
+const val LEGACY_BACKSTACK = "LegacyBackStack"
 
 const val TIMESTAMP = "timestamp"
+
+const val NA = "N/A"
 
 internal fun Activity.toFlipperObjectBuilder(): FlipperObject.Builder {
     return FlipperObject.Builder()

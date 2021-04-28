@@ -11,7 +11,6 @@ internal class FlipperActivityCallback(
     private val flipperPlugin: IActivityLifeCycleCallbackFlipperHandler
 ) : Application.ActivityLifecycleCallbacks {
 
-
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         flipperPlugin.pushActivityEvent(activity, ActivityLifeCycle.ON_ACTIVITY_CREATED)
         if (activity is FragmentActivity) {

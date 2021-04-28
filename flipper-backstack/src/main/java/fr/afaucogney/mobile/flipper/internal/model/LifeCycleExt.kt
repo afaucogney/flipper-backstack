@@ -13,8 +13,10 @@ internal val FlipperObjectType.key: String
     get() = this.toString().toLowerCase(Locale.getDefault())
 
 
-internal fun FlipperObject.Builder.addLifeCycleEvent(event: FragmentLifeCycle): FlipperObject.Builder {
-    return this.put(LIFE_CYCLE_EVENT, event.key)
+internal fun FlipperObject.Builder.addLifeCycleEvent(event: FragmentLifeCycle?): FlipperObject.Builder {
+    return if (event != null)
+        this.put(LIFE_CYCLE_EVENT, event.key)
+    else this
 }
 
 internal fun FlipperObject.Builder.addLifeCycleEvent(event: ActivityLifeCycle?): FlipperObject.Builder {

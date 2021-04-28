@@ -36,7 +36,6 @@ internal val ViewModelLifeCycle.key: String
     get() = this.toString().toLowerCase(Locale.getDefault())
 
 // ACTIVITY
-
 internal fun FlipperObject.Builder.addViewModelInfo(activity: Activity): FlipperObject.Builder {
     return this.apply {
         val activityViewModels = FlipperObject.Builder()
@@ -67,8 +66,6 @@ internal fun FlipperObject.Builder.addViewModelInfo(activity: Activity): Flipper
 }
 
 // FRAGMENT
-
-
 internal fun FlipperObject.Builder.addViewModelInfo(fragment: Fragment): FlipperObject.Builder {
     return this.apply {
         val fragmentsViewModels = FlipperObject.Builder()

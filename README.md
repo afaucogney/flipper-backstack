@@ -26,7 +26,7 @@ You can :
  - activities
  - fragments
  - viewModels (with reflexion)
- - liveDatas (with reflexion)
+ - viewModel members (liveDatas) (with reflexion)
  - jobs (not yet available)
  - services (not yet available)
  - trash (objects destroyed)
@@ -91,6 +91,8 @@ Install the plgin in Flipper, it is called `lifecycle` [Npm page](https://www.np
 ## TODO
 
 - [ ] Be able to filter object in structure
+ - [ ] Save option in client (duplex)
+ - [ ] Impact event filtering from object
 - [ ] Evaluate saving data in db / shareprefs
 - [ ] Handle clean versioning / release
 - [ ] Generate docs
@@ -99,6 +101,7 @@ Install the plgin in Flipper, it is called `lifecycle` [Npm page](https://www.np
 - [ ] Impl Services
 - [ ] See bundle / saveinstance state
 - [ ] See App lifecycle
+
  
 
  

@@ -6,6 +6,19 @@ import com.facebook.flipper.core.FlipperObject
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
 
+///////////////////////////////////////////////////////////////////////////
+// CONST
+///////////////////////////////////////////////////////////////////////////
+
+const val VISIBILITY = "visibility"
+const val MUTABILITY = "mutability"
+const val MEMBER_TYPE = "type"
+const val VALUE = "value"
+
+///////////////////////////////////////////////////////////////////////////
+// BUILDER
+///////////////////////////////////////////////////////////////////////////
+
 internal fun ViewModel.addPublicMembers(): FlipperObject.Builder {
     return FlipperObject
         .Builder()
@@ -17,11 +30,11 @@ internal fun ViewModel.addPublicMembers(): FlipperObject.Builder {
                     this.put(
                         it.name,
                         FlipperObject.Builder()
-                            .put("visibility", it.visibility)
-                            .put("mutability", it.toString().split(" ").first())
-                            .put("type", it.returnType)
+                            .put(VISIBILITY, it.visibility)
+                            .put(MUTABILITY, it.toString().split(" ").first())
+                            .put(MEMBER_TYPE, it.returnType)
                             .put(
-                                "value",
+                                VALUE,
                                 it.getter
                                     .call(this@addPublicMembers)
                                     .let {
