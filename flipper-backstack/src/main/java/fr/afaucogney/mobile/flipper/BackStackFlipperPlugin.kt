@@ -200,12 +200,12 @@ class BackStackFlipperPlugin(app: Application) :
                         activityMap[this.fid]!!
                             .addLifeCycleEvent(event)
                             .addBackStackInfo(this)
+                            .addStackInfo(this)
                             .addViewModelInfo(this)
                             .put(FRAGMENTS, fragmentMap.toFlipperObjectBuilder())
                             .let {
                                 FlipperObject.Builder()
                                     .put(this.fid, it)
-
                             }
                             .let {
                                 FlipperObject.Builder()
@@ -245,7 +245,6 @@ class BackStackFlipperPlugin(app: Application) :
                 }
             }
     }
-
 
     @SuppressLint("RestrictedApi")
     private fun Fragment.saveAndMapToFlipperObjectBuilder(event: FragmentLifeCycle): FlipperObject.Builder {

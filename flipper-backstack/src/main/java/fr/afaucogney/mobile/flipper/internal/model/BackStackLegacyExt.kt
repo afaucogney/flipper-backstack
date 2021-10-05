@@ -4,7 +4,6 @@ import android.app.Activity
 import androidx.fragment.app.FragmentActivity
 import com.facebook.flipper.core.FlipperObject
 
-
 internal fun FlipperObject.Builder.addBackStackInfo(activity: Activity): FlipperObject.Builder {
     return this.apply {
         if (activity is FragmentActivity) {
