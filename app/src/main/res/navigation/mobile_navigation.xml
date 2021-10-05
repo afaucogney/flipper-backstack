@@ -15,11 +15,21 @@
         android:id="@+id/navigation_dashboard"
         android:name="fr.afaucogney.mobile.android.flipper.flipperandroidbackstack.ui.dashboard.DashboardFragment"
         android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard" >
+        <action
+            android:id="@+id/action_navigation_dashboard_to_navigation_settings2"
+            app:destination="@id/navigation_settings" />
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_notifications"
         android:name="fr.afaucogney.mobile.android.flipper.flipperandroidbackstack.ui.notifications.NotificationsFragment"
         android:label="@string/title_notifications"
         tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/navigation_settings"
+        android:name="fr.afaucogney.mobile.android.flipper.flipperandroidbackstack.ui.settings.SettingsFragment"
+        android:label="@string/title_settings"
+        tools:layout="@layout/fragment_settings" />
 </navigation>

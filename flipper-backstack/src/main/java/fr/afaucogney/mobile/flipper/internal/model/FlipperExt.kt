@@ -16,6 +16,7 @@ const val NEW_EVENT = "newEvent"
 const val LIFE_CYCLE_EVENT = "lifeCycle"
 const val BACK_STACK = "backStack"
 const val TRASH = "trash"
+const val STACK = "stack"
 
 const val ACTIVITIES = "activities"
 const val FRAGMENTS = "fragments"
