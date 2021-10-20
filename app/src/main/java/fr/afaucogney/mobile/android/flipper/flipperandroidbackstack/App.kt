@@ -7,10 +7,12 @@ import com.facebook.flipper.plugins.inspector.DescriptorMapping
 import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin
 import com.facebook.soloader.SoLoader
 import fr.afaucogney.mobile.flipper.BackStackFlipperPlugin
+import fr.afaucogney.mobile.flipper.internal.util.rx.HyperlinkedDebugTree
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+
 //        if (BuildConfig.DEBUG) {
         SoLoader.init(this, false)
 //            if (FlipperUtils.shouldEnableFlipper(this)) {

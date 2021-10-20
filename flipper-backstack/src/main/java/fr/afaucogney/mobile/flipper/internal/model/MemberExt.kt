@@ -52,7 +52,7 @@ internal fun ViewModel.addPublicMembers(): FlipperObject.Builder {
 internal fun FlipperObject.Builder.addViewModelsMembers(viewModel: ViewModel): FlipperObject.Builder {
     return this
         .put(
-            MEMBERS,
+            VIEW_MODEL_MEMBERS,
             viewModel.addPublicMembers()
         )
 }

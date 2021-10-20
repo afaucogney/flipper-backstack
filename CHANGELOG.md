@@ -1,6 +1,14 @@
+# 0.5.0
+- Add Legacy back-stack support, via fragment-manager (only for activity)
+- Migrate code to Rx to enable background thread
+- Add sample activity with fragment-manager
+- General optimization of filtering options
+- Migrate to Java11
+- Add Timber for logging
+
 # 0.4.1
 - Add filtering for event logs
-- Add filtering menu for object strcuture (wip)
+- Add filtering menu for object structure (wip)
 
 # 0.4.0
 - Add log side windows with events of Activities and Fragments

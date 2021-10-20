@@ -1,7 +1,6 @@
 package fr.afaucogney.mobile.flipper.internal.model
 
 import android.app.Activity
-import com.facebook.flipper.core.FlipperArray
 import com.facebook.flipper.core.FlipperObject
 import java.util.*
 
@@ -65,18 +64,19 @@ internal fun Activity.storeActivityToMapIfNecessary(event: ActivityLifeCycle?) {
 // This do no support yet multiple activity instance
 internal fun Map<String, FlipperObject.Builder>.toFlipperObjectBuilder(): FlipperObject.Builder {
     val result = FlipperObject.Builder()
-    this.toSortedMap().forEach { (activityId, activityObjectBuilder) ->
-        val activityObject = activityObjectBuilder.build()
-        result.put(
-            activityObject.name,
-            FlipperObject
-                .Builder()
-                .put(
-                    activityId,
-                    activityObjectBuilder
-                )
-        )
-    }
+    this.toSortedMap()
+        .forEach { (activityId, activityObjectBuilder) ->
+            val activityObject = activityObjectBuilder.build()
+            result.put(
+                activityObject.name,
+                FlipperObject
+                    .Builder()
+                    .put(
+                        activityId,
+                        activityObjectBuilder
+                    )
+            )
+        }
     return result
 }
 

@@ -3,6 +3,7 @@ import {PluginClient, usePlugin, createState, useValue, Layout} from 'flipper-pl
 import {ManagedDataInspector, DetailSidebar, Console} from 'flipper';
 import {Typography, Select, Timeline, Spin} from "antd";
 
+// This is the App Object Tree (reduced by filter)
 type Data = {
   id: string;
   name?: string;
@@ -10,6 +11,7 @@ type Data = {
   type?: string;
 };
 
+// This is the App Object Events
 type Event = {
   id: string;
   name?: string;
@@ -18,6 +20,7 @@ type Event = {
   timestamp: String;
 };
 
+// This is the App Object Filters
 type ObjectFilterOption = {
   id: string;
   options : String;
@@ -36,25 +39,28 @@ export function plugin(client: PluginClient<Events, {}>) {
   const event = createState<Record<string, Event>>({}, {persist: 'event'});
   const treeFilterOptions = createState<Record<string, ObjectFilterOption>>({}, {persist: 'treeFilterOptions'});
 
+  // Receive new App Object Tree
   client.onMessage('newData', (newData) => {
     data.update((draft) => {
       draft[newData.id] = newData;
     });
   });
 
+  // Receive new App Object Event
   client.onMessage('newEvent', (newEvent) => {
     event.update((draft) => {
       draft[newEvent.id] = newEvent;
     });
   });
 
+  // Receive new App Object Tree Filter selection
   client.onMessage('newTreeFilterOptions', (newTreeFilterOptions) => {
     treeFilterOptions.update((draft) => {
       console.log("filter0",newTreeFilterOptions)
       // draft = newObjectFilterOption;
       // draft[newTreeFilterOptions.id] = newTreeFilterOptions;
       draft[0] = newTreeFilterOptions;
-      // console.log("filter1",draft)
+      console.log("filter1",draft)
       // console.log("filter2",newTreeFilterOptions)
     });
   });
@@ -67,6 +73,7 @@ export function plugin(client: PluginClient<Events, {}>) {
     },
   });
 
+  // Push back to App the request for Object filters update
   function updateTreeOption(options : String){ 
     console.log("filter00",options)
     client.send('newTreeFilterOptions',{options})
@@ -97,18 +104,18 @@ export function Component() {
   }
 
   // OBJECT FILTERING
-  const defaultFullObjectFilters = ['Application','Activities','Fragments','ViewModels','LiveDatas','Jobs','Services','Trash']
-  const objectOptions: FilterProps[] = [];
+  const defaultFullObjectFilters = ['Application','Activities','Fragments','ViewModels','LiveData','LegacyBackStacks','JetpackBackStacks','Jobs','Services','Trash']
+  const availableObjectFilters: FilterProps[] = [];
   
-  var clientObjectFilters = []
+  var selectedObjectFilters = []
   if (Object.values(objectFilter).length > 0) {
     console.log("filter4a",objectFilter[0].options)
-    clientObjectFilters = objectFilter[0].options
+    selectedObjectFilters = objectFilter[0].options
   } else {
     console.log("filter4b",objectFilter)
-    clientObjectFilters = []
+    selectedObjectFilters = []
   }
-  console.log("filter40",clientObjectFilters)
+  console.log("filter40",selectedObjectFilters)
   console.log("filter41",defaultFullObjectFilters)
   
   // const [selectedObjectFilters, setSelectedObjectFilters] = useState(clientObjectFilters)
@@ -130,7 +137,7 @@ export function Component() {
   
   
   for (let i=0; i<defaultFullObjectFilters.length; i++){
-    objectOptions.push({
+    availableObjectFilters.push({
       label: defaultFullObjectFilters[i],
       value: defaultFullObjectFilters[i],
     });
@@ -142,14 +149,14 @@ export function Component() {
   }
 
   // EVENT FILTERING
-  const defaultFullEventFilters = ['Created','Started','Paused','Attached','ViewCreated','SaveInstanceState']
-  const eventOptions: FilterProps[] = [];
+  const defaultFullEventFilters = ['Created','Started','Paused']//,'Attached','ViewCreated','SaveInstanceState']
+  const availableEventFilters: FilterProps[] = [];
   const [selectedEventFilters, setSelectedEventFilters] = useState(defaultFullEventFilters)
   // console.log("filter___event",selectedEventFilters)
 
 
   for (let i=0; i<defaultFullEventFilters.length; i++){
-    eventOptions.push({
+    availableEventFilters.push({
       label: defaultFullEventFilters[i],
       value: defaultFullEventFilters[i],
     });
@@ -226,7 +233,7 @@ export function Component() {
         allowClear
         style={{ width: "100%" }}
         value={selectedEventFilters}
-        options={eventOptions}
+        options={availableEventFilters}
         placeholder="Please select"
         onChange={handleEventFilterChange}
       />
@@ -251,14 +258,14 @@ export function Component() {
   function addEventIfNotFiltered(event : Event, result: []) {
     if (event["lifeCycle"].startsWith("ON_ACTIVITY")) {
       // Activity Event
-      if (clientObjectFilters.includes(defaultFullObjectFilters[1])) {
+      if (selectedObjectFilters.includes(defaultFullObjectFilters[1])) {
         // Activities should be viewed
         addEventIfNotFilteredAndIfObjectAvailableInTree(event, result)
       }
     } else {
       if (event["lifeCycle"].startsWith("ON_FRAGMENT")) {
         // Fragment Event
-        if (clientObjectFilters.includes(defaultFullObjectFilters[2])) {
+        if (selectedObjectFilters.includes(defaultFullObjectFilters[2])) {
           // Fragments should be viewed
           addEventIfNotFilteredAndIfObjectAvailableInTree(event, result)
         }
@@ -359,8 +366,8 @@ export function Component() {
         mode="multiple"
         allowClear
         style={{ width: "100%" }}
-        value={clientObjectFilters}
-        options={objectOptions}
+        value={selectedObjectFilters}
+        options={availableObjectFilters}
         placeholder="Please select"
         onChange={handleObjectFilterChange}
       />

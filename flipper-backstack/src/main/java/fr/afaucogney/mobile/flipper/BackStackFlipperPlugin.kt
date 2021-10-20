@@ -4,29 +4,36 @@ import addServicesInfo
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
-import android.os.Handler
-import android.os.Looper
-import androidx.core.os.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
-import com.facebook.flipper.core.*
+import com.facebook.flipper.core.FlipperArray
+import com.facebook.flipper.core.FlipperConnection
+import com.facebook.flipper.core.FlipperObject
+import com.facebook.flipper.core.FlipperPlugin
 import fr.afaucogney.mobile.flipper.internal.callback.FlipperActivityCallback
 import fr.afaucogney.mobile.flipper.internal.callback.FlipperFragmentCallback
 import fr.afaucogney.mobile.flipper.internal.model.*
-import fr.afaucogney.mobile.flipper.internal.model.ActivityLifeCycle
-import fr.afaucogney.mobile.flipper.internal.model.FragmentLifeCycle
-import fr.afaucogney.mobile.flipper.internal.model.name
-import fr.afaucogney.mobile.flipper.internal.util.removeField
-import fr.afaucogney.mobile.flipper.internal.util.toJsonObject
-import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
+import fr.afaucogney.mobile.flipper.internal.util.rx.HyperlinkedDebugTree
+import fr.afaucogney.mobile.flipper.internal.util.rx.RxLogSubscriber
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
 class BackStackFlipperPlugin(app: Application) :
     FlipperActivityCallback.IActivityLifeCycleCallbackFlipperHandler,
     FlipperFragmentCallback.IFragmentLifeCycleCallbackFlipperHandler,
     FlipperPlugin {
+
+    ///////////////////////////////////////////////////////////////////////////
+    // CONST
+    ///////////////////////////////////////////////////////////////////////////
+
+    companion object {
+        const val DEBOUNCE_DELAY = 200L
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // DATA
@@ -35,12 +42,18 @@ class BackStackFlipperPlugin(app: Application) :
     private var connection: FlipperConnection? = null
     private val fragmentCallback = FlipperFragmentCallback(this)
     private val activityCallback = FlipperActivityCallback(this)
+    private val disposeBag = CompositeDisposable()
+
+    private val dataStream = BehaviorSubject.create<FlipperObject.Builder>()
+    private val eventStream = BehaviorSubject.create<FlipperArray.Builder>()
+    private val objectFilterStream = BehaviorSubject.create<FlipperObject.Builder>()
 
     ///////////////////////////////////////////////////////////////////////////
     // CONSTRUCTOR
     ///////////////////////////////////////////////////////////////////////////
 
     init {
+        Timber.plant(HyperlinkedDebugTree())
         app.registerActivityLifecycleCallbacks(activityCallback)
     }
 
@@ -62,18 +75,49 @@ class BackStackFlipperPlugin(app: Application) :
     override fun onConnect(connection: FlipperConnection?) {
         this.connection = connection
         handleDesktopEvents()
-        buildObjectTreeFilterMessage().sendObjectsFilters()
-        buildObjectTreeMessage().sendObjectTree()
+//        buildObjectTreeFilterMessage().sendObjectsFilters()
+//        buildObjectTreeMessage().sendObjectTree()
+        initSendProcess()
+    }
+
+    private fun initSendProcess() {
+        if (disposeBag.size() == 0)
+            disposeBag.addAll(
+                dataStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build().applyFilters() }
+                     //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(NEW_DATA_KEY, it) }
+                    .doOnSubscribe { buildObjectTreeMessage().sendObjectTree() }
+                    .subscribeWith(RxLogSubscriber("dataStream")),
+                eventStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build() }
+                    //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(NEW_EVENT_KEY, it) }
+                    .subscribeWith(RxLogSubscriber("eventStream")),
+                objectFilterStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build() }
+                    //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(FILTER_OPTION_KEY, it) }
+                    // We update the tree when filters changed
+                    .doOnNext { buildObjectTreeMessage().sendObjectTree() }
+                    .doOnSubscribe { buildObjectTreeFilterMessage().sendObjectsFilters() }
+                    .subscribeWith(RxLogSubscriber("objectFilterStream")),
+            )
     }
 
     private fun handleDesktopEvents() {
         connection?.run {
             // Object Tree Filters
             receive(FILTER_OPTION_KEY) { params, _ ->
+                Timber.tag("_objectFilterStream").d("receive : $params")
                 updateClientObjectFiltersValues(params)
-//                Handler(Looper.getMainLooper()).postDelayed(500) {
-                    buildObjectTreeFilterMessage().sendObjectsFilters()
-//                }
+                buildObjectTreeFilterMessage().sendObjectsFilters()
             }
         }
     }
@@ -82,6 +126,7 @@ class BackStackFlipperPlugin(app: Application) :
      * Release the connection
      */
     override fun onDisconnect() {
+        disposeBag.clear()
         connection = null
     }
 
@@ -92,11 +137,13 @@ class BackStackFlipperPlugin(app: Application) :
         return false
     }
 
+
     ///////////////////////////////////////////////////////////////////////////
     // BACK STACK
     ///////////////////////////////////////////////////////////////////////////
 
     private val backStackListener = FragmentManager.OnBackStackChangedListener {
+        Timber.d("")
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -104,19 +151,15 @@ class BackStackFlipperPlugin(app: Application) :
     ///////////////////////////////////////////////////////////////////////////
 
     private fun FlipperObject.Builder.sendObjectTree() {
-        this.build()
-            .applyFilters()
-            .apply { connection?.send(NEW_DATA_KEY, this) }
+        this.run { dataStream.onNext(this) }
     }
 
     private fun FlipperArray.Builder.sendEvent() {
-        this.build()
-            .apply { connection?.send(NEW_EVENT_KEY, this) }
+        this            .run { eventStream.onNext(this) }
     }
 
     private fun FlipperObject.Builder.sendObjectsFilters() {
-        this.build()
-            .apply { connection?.send(FILTER_OPTION_KEY, this) }
+        this            .run { objectFilterStream.onNext(this) }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -148,6 +191,16 @@ class BackStackFlipperPlugin(app: Application) :
         fragment
             .saveEvent(event)
             .sendEvent()
+    }
+
+    override fun pushFragmentManagerEvent(
+        fragment: Fragment,
+        fm: FragmentManager) {
+        fragment
+            .activity
+            ?.saveAndMapToFlipperObjectBuilder()
+            ?.sendObjectTree()
+
     }
 
     override fun moveToTrashAndUpdate(fragment: Fragment) {

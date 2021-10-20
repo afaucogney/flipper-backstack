@@ -9,32 +9,48 @@ import fr.afaucogney.mobile.flipper.internal.util.toJsonObject
 // DATA
 ///////////////////////////////////////////////////////////////////////////
 
-var optionTrash = true
-var optionApplication = true
-var optionActivities = true
-var optionFragments = true
-var optionViewModels = true
-var optionViewModelMembers = true
+internal var optionTrash = false
+internal var optionApplication = false
+internal var optionActivities = true
+internal var optionFragments = true
+    set(value) {
+        field = value
+        if (!field) {
+            optionViewModels = false
+            optionBackStackLegacy = false
+            optionBackStackJetPack = false
+        }
+    }
+internal var optionViewModels = true
+    set(value) {
+        field = value
+        if (field) {
+            optionFragments = true
+        } else {
+            optionViewModelMembers = false
+        }
+    }
+internal var optionViewModelMembers = false
     set(value) {
         field = value
         if (field) {
             optionViewModels = true
         }
     }
-var optionJobs = false
-var optionServices = false
-var optionBackStackJetPack = true
+internal var optionJobs = false
+internal var optionServices = false
+internal var optionBackStackJetPack = false
     set(value) {
         field = value
         if (field) {
             optionFragments = true
         }
     }
-var optionBackStackLegacy = true
+internal var optionBackStackLegacy = false
     set(value) {
         field = value
         if (field) {
-            optionFragments = true
+            optionActivities = true
         }
     }
 
@@ -47,16 +63,47 @@ internal fun updateClientObjectFiltersValues(params: FlipperObject) {
         .getArray(FILTER_OBJECT_TREE_KEY)
         .toStringList()
         .run {
-            optionViewModelMembers = contains(MEMBERS)
-            optionViewModels = contains(VIEW_MODELS)
-            optionFragments = contains(FRAGMENTS)
-            optionActivities = contains(ACTIVITIES)
-            optionBackStackJetPack = contains(JETPACK_BACKSTACK)
-            optionBackStackLegacy = contains(LEGACY_BACKSTACK)
+
             optionTrash = contains(TRASH)
             optionJobs = contains(JOBS)
             optionServices = contains(SERVICES)
+            optionActivities = contains(ACTIVITIES)
             optionApplication = contains(APPLICATION)
+
+            contains(FRAGMENTS).let {
+                if (it != optionFragments) {
+                    optionFragments = it
+                    return
+                }
+            }
+
+            contains(VIEW_MODELS).let {
+                if (it != optionViewModels) {
+                    optionViewModels = it
+                    return
+                }
+            }
+
+            contains(VIEW_MODEL_MEMBERS).let {
+                if (it != optionViewModelMembers) {
+                    optionViewModelMembers = it
+                    return
+                }
+            }
+
+            contains(BACKSTACK_JETPACK).let {
+                if (it != optionBackStackJetPack) {
+                    optionBackStackJetPack = it
+                    return
+                }
+            }
+
+            contains(BACKSTACK_LEGACY).let {
+                if (it != optionBackStackLegacy) {
+                    optionBackStackLegacy = it
+                    return
+                }
+            }
         }
 }
 
@@ -75,29 +122,21 @@ internal fun buildObjectTreeFilterMessage(): FlipperObject.Builder {
                     if (optionActivities) put(ACTIVITIES)
                     if (optionFragments) put(FRAGMENTS)
                     if (optionViewModels) put(VIEW_MODELS)
-                    if (optionViewModelMembers) put(MEMBERS)
+                    if (optionViewModelMembers /*&& optionViewModels*/) put(VIEW_MODEL_MEMBERS)
                     if (optionServices) put(SERVICES)
                     if (optionJobs) put(JOBS)
                     if (optionTrash) put(TRASH)
-                    if (optionBackStackLegacy) put(LEGACY_BACKSTACK)
-                    if (optionBackStackJetPack) put(JETPACK_BACKSTACK)
+                    if (optionBackStackLegacy) put(BACKSTACK_LEGACY)
+                    if (optionBackStackJetPack/* && optionFragments*/) put(BACKSTACK_JETPACK)
                 }
         )
 }
 
 fun FlipperObject.applyFilters(): FlipperObject {
     val result = this.toJsonObject()
-    if (!optionViewModelMembers) {
-        result.removeField(MEMBERS)
-    }
-    if (!optionViewModels) {
-        result.removeField(VIEW_MODELS)
-    }
-    if (!optionFragments) {
-        result.removeField(FRAGMENTS)
-    }
-    if (!optionActivities) {
-        result.removeField(ACTIVITIES)
+    // We first remove independent node
+    if (!optionTrash) {
+        result.removeField(TRASH)
     }
     if (!optionJobs) {
         result.removeField(JOBS)
@@ -105,11 +144,17 @@ fun FlipperObject.applyFilters(): FlipperObject {
     if (!optionServices) {
         result.removeField(SERVICES)
     }
-    if (!optionTrash) {
-        result.removeField(TRASH)
+    // ViewModels
+    if (!optionViewModels) {
+        result.removeField(VIEW_MODELS)
     }
-    if (!optionApplication) {
-        result.removeField(result.keys().next())
+    // ViewModel members are optionals
+    else if (!optionViewModelMembers) {
+        result.removeField(VIEW_MODEL_MEMBERS)
+    }
+    // Fragments
+    if (!optionFragments) {
+        result.removeField(FRAGMENTS)
     }
     return FlipperObject(result)
 }
