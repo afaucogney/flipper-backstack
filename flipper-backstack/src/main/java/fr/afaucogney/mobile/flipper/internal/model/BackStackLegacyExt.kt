@@ -20,12 +20,16 @@ internal fun FlipperObject.Builder.addBackStackInfo(activity: Activity): Flipper
                 backStack.put(entry.id.toString(), "${entry.name}")
             }
             val addedFragments = FlipperObject.Builder()
-            activity.supportFragmentManager.fragments.forEachIndexed { index, fragment ->
-                addedFragments.put("$index", "$fragment, ${fragment.tag}")
-            }
+            activity.supportFragmentManager
+                .fragments
+                .forEachIndexed { index, fragment ->
+                    addedFragments.put("$index", "$fragment, ${fragment?.tag}")
+                }
             val activeFragments = FlipperObject.Builder()
-            activity.supportFragmentManager.getActiveFragments()?.forEachIndexed { index, fragment ->
-                    activeFragments.put("$index", "$fragment, ${fragment.tag}")
+            activity.supportFragmentManager
+                .getActiveFragments()
+                ?.forEachIndexed { index, fragment ->
+                    activeFragments.put("$index", "$fragment, ${fragment?.tag}")
                 }
             put(
                 BACKSTACK_LEGACY,
@@ -33,7 +37,6 @@ internal fun FlipperObject.Builder.addBackStackInfo(activity: Activity): Flipper
                     .put(
                         FRAGMENT_MANAGER,
                         activity.supportFragmentManager.toString()
-//                        Integer.toHexString(System.identityHashCode(activity.supportFragmentManager))
                     )
                     .put(ENTRIES, backStack)
                     .put(ADDED_FRAGMENTS, addedFragments)
@@ -43,6 +46,6 @@ internal fun FlipperObject.Builder.addBackStackInfo(activity: Activity): Flipper
     }
 }
 
-private fun FragmentManager.getActiveFragments(): List<Fragment>? {
+private fun FragmentManager.getActiveFragments(): List<Fragment?>? {
     return this.getPrivateFunction("getActiveFragments")
 }
