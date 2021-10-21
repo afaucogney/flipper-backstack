@@ -22,7 +22,6 @@ It enables to see the **big internal picture** of your running app in a side too
 
 You can get the Android plugin with the Gradle dependency from Jitpack :
 
-- [https://jitpack.io/#afaucogney/flipper-backstack]()
 - [![](https://jitpack.io/v/afaucogney/flipper-backstack.svg)](https://jitpack.io/#afaucogney/flipper-backstack)
 
 Current version is `5.0.2`

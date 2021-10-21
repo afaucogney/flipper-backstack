@@ -47,7 +47,7 @@ dependencies {
     implementation "androidx.navigation:navigation-ui-ktx:2.3.5"
 
     // Flipper
-    implementation "com.facebook.flipper:flipper:0.104.0"
+    implementation "com.facebook.flipper:flipper:0.116.0"
     implementation "com.facebook.soloader:soloader:0.10.1"
 
     // Flipper plugin
