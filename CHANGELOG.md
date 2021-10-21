@@ -1,3 +1,7 @@
+# 0.5.2
+- Remove JCenter
+- Update README.md
+
 # 0.5.1
 - Migrate to AGP 7.0.3
 - Migrate sample App to Android 12
@@ -36,5 +40,5 @@
 
 # 0.1.0
 - First implementation
-- Add Activities
+- Add ActivitiesGener
 - Add Fragments

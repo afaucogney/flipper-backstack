@@ -61,7 +61,7 @@ afterEvaluate {
                 // You can then customize attributes of the publication as shown below.
                 groupId = 'fr.afaucogney.mobile.flipper'
                 artifactId = 'android-objects-lifecycle'
-                version = '0.5.1'
+                version = '0.5.2'
             }
         }
     }

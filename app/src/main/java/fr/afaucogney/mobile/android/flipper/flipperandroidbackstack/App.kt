@@ -12,9 +12,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-//        if (BuildConfig.DEBUG) {
         SoLoader.init(this, false)
-//            if (FlipperUtils.shouldEnableFlipper(this)) {
         val client: FlipperClient = AndroidFlipperClient.getInstance(this)
         with(client) {
             addPlugin(
