@@ -1,3 +1,6 @@
+# 0.5.3
+- Fix crash when fragment is null (affect legacy backstack)
+
 # 0.5.2
 - Remove JCenter
 - Update README.md

@@ -23,13 +23,19 @@ internal fun FlipperObject.Builder.addBackStackInfo(activity: Activity): Flipper
             activity.supportFragmentManager
                 .fragments
                 .forEachIndexed { index, fragment ->
-                    addedFragments.put("$index", "$fragment, ${fragment?.tag}")
+                    addedFragments.put(
+                        "$index",
+                        "$fragment, ${fragment?.tag ?: "fragment is null"}"
+                    )
                 }
             val activeFragments = FlipperObject.Builder()
             activity.supportFragmentManager
                 .getActiveFragments()
                 ?.forEachIndexed { index, fragment ->
-                    activeFragments.put("$index", "$fragment, ${fragment?.tag}")
+                    activeFragments.put(
+                        "$index",
+                        "$fragment, ${fragment?.tag ?: "fragment is null"}"
+                    )
                 }
             put(
                 BACKSTACK_LEGACY,
