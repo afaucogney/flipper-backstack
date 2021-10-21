@@ -22,7 +22,7 @@ import io.reactivex.rxjava3.subjects.BehaviorSubject
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
-class BackStackFlipperPlugin(app: Application) :
+class BackStackFlipperPlugin(app: Application, showLog: Boolean = false) :
     FlipperActivityCallback.IActivityLifeCycleCallbackFlipperHandler,
     FlipperFragmentCallback.IFragmentLifeCycleCallbackFlipperHandler,
     FlipperPlugin {
@@ -53,7 +53,7 @@ class BackStackFlipperPlugin(app: Application) :
     ///////////////////////////////////////////////////////////////////////////
 
     init {
-        Timber.plant(HyperlinkedDebugTree())
+        if (showLog) Timber.plant(HyperlinkedDebugTree())
         app.registerActivityLifecycleCallbacks(activityCallback)
     }
 
@@ -86,7 +86,7 @@ class BackStackFlipperPlugin(app: Application) :
                 dataStream
                     .subscribeOn(Schedulers.io())
                     .map { it.build().applyFilters() }
-                     //.distinctUntilChanged()
+                    //.distinctUntilChanged()
                     .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
                     .doOnNext { connection?.send(NEW_DATA_KEY, it) }
                     .doOnSubscribe { buildObjectTreeMessage().sendObjectTree() }
@@ -155,11 +155,11 @@ class BackStackFlipperPlugin(app: Application) :
     }
 
     private fun FlipperArray.Builder.sendEvent() {
-        this            .run { eventStream.onNext(this) }
+        this.run { eventStream.onNext(this) }
     }
 
     private fun FlipperObject.Builder.sendObjectsFilters() {
-        this            .run { objectFilterStream.onNext(this) }
+        this.run { objectFilterStream.onNext(this) }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -195,7 +195,8 @@ class BackStackFlipperPlugin(app: Application) :
 
     override fun pushFragmentManagerEvent(
         fragment: Fragment,
-        fm: FragmentManager) {
+        fm: FragmentManager
+    ) {
         fragment
             .activity
             ?.saveAndMapToFlipperObjectBuilder()

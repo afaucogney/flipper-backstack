@@ -1,3 +1,10 @@
+# 0.5.1
+- Migrate to AGP 7.0.3
+- Migrate sample App to Android 12
+- Switch to Maven-Publish plugin
+- Fix some Lint issues
+- Disable log by default (may be enable in the Plugin constructor)
+
 # 0.5.0
 - Add Legacy back-stack support, via fragment-manager (only for activity)
 - Migrate code to Rx to enable background thread

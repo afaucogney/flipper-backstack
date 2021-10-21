@@ -36,7 +36,7 @@ yarn install
 
 ## Update version on JitPack
 
-- Update version number on build.gradle
+- Update version number on build.gradle ()
 - Git commit, push
 
 ## Update version on Npm

@@ -12,7 +12,7 @@ inline fun <reified T : Any, R> T.getPrivateProperty(name: String): R? =
         ?.apply { isAccessible = true }
         ?.get(this) as? R
 
-inline fun <reified T : Any, R> T.getPrivateFunction(name: String, vararg args: Any?): R? =
+inline fun <reified T : Any, R> T.getPrivateFunction(name: String): R? =
     T::class
         .memberFunctions
         .firstOrNull { it.name == name }

@@ -7,7 +7,6 @@ import com.facebook.flipper.plugins.inspector.DescriptorMapping
 import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin
 import com.facebook.soloader.SoLoader
 import fr.afaucogney.mobile.flipper.BackStackFlipperPlugin
-import fr.afaucogney.mobile.flipper.internal.util.rx.HyperlinkedDebugTree
 
 class App : Application() {
     override fun onCreate() {
@@ -25,10 +24,10 @@ class App : Application() {
                 )
             )
             /**
-             * initialisation of KtpFlipperPlugin with its default constructor
+             * initialisation of AndroidObjectsLifecycleFlipperPlugin with its default constructor
              */
-            addPlugin(BackStackFlipperPlugin(this@App))
+            addPlugin(BackStackFlipperPlugin(this@App, false))
             start()
         }
-            }
+    }
 }

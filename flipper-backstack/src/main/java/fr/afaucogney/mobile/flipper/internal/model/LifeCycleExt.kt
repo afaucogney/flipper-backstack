@@ -10,7 +10,7 @@ internal enum class FlipperObjectType {
 }
 
 internal val FlipperObjectType.key: String
-    get() = this.toString().toLowerCase(Locale.getDefault())
+    get() = this.toString().lowercase(Locale.getDefault())
 
 
 internal fun FlipperObject.Builder.addLifeCycleEvent(event: FragmentLifeCycle?): FlipperObject.Builder {

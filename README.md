@@ -13,6 +13,11 @@ It enable to see the "big internal picture" of your running app in a side tool. 
 The plugin is under development
 Name is not sealed (ideas are welcome)
 
+## Availability
+
+You can get the Android plugin with the Gradle dependency from Jitpack
+- https://jitpack.io/#afaucogney/flipper-backstack
+
 ## Content
 
 ![alt text](./screenshot/flipper_android_lifecyle_4.1.0.png)

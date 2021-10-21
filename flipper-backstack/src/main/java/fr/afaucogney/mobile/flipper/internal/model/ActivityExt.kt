@@ -44,7 +44,7 @@ internal val Activity.type: String
     get() = FlipperObjectType.ACTIVITY.key
 
 internal val ActivityLifeCycle.key: String
-    get() = this.toString().toLowerCase(Locale.getDefault())
+    get() = this.toString().lowercase(Locale.getDefault())
 
 internal fun Activity.storeActivityToMapIfNecessary(event: ActivityLifeCycle?) {
     if (!activityMap.containsKey(this.fid)) {
