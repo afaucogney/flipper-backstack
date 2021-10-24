@@ -14,19 +14,26 @@ import com.facebook.flipper.core.FlipperPlugin
 import fr.afaucogney.mobile.flipper.internal.callback.FlipperActivityCallback
 import fr.afaucogney.mobile.flipper.internal.callback.FlipperFragmentCallback
 import fr.afaucogney.mobile.flipper.internal.model.*
-import fr.afaucogney.mobile.flipper.internal.model.ActivityLifeCycle
-import fr.afaucogney.mobile.flipper.internal.model.FragmentLifeCycle
-import fr.afaucogney.mobile.flipper.internal.model.name
-import java.sql.Time
-import java.text.SimpleDateFormat
-import java.util.*
+import fr.afaucogney.mobile.flipper.internal.util.rx.HyperlinkedDebugTree
+import fr.afaucogney.mobile.flipper.internal.util.rx.RxLogSubscriber
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashMap
 
-class BackStackFlipperPlugin(app: Application) :
+class BackStackFlipperPlugin(app: Application, showLog: Boolean = false) :
     FlipperActivityCallback.IActivityLifeCycleCallbackFlipperHandler,
     FlipperFragmentCallback.IFragmentLifeCycleCallbackFlipperHandler,
     FlipperPlugin {
+
+    ///////////////////////////////////////////////////////////////////////////
+    // CONST
+    ///////////////////////////////////////////////////////////////////////////
+
+    companion object {
+        const val DEBOUNCE_DELAY = 200L
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // DATA
@@ -35,13 +42,18 @@ class BackStackFlipperPlugin(app: Application) :
     private var connection: FlipperConnection? = null
     private val fragmentCallback = FlipperFragmentCallback(this)
     private val activityCallback = FlipperActivityCallback(this)
-    private val timeStampFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.FRANCE)
+    private val disposeBag = CompositeDisposable()
+
+    private val dataStream = BehaviorSubject.create<FlipperObject.Builder>()
+    private val eventStream = BehaviorSubject.create<FlipperArray.Builder>()
+    private val objectFilterStream = BehaviorSubject.create<FlipperObject.Builder>()
 
     ///////////////////////////////////////////////////////////////////////////
     // CONSTRUCTOR
     ///////////////////////////////////////////////////////////////////////////
 
     init {
+        if (showLog) Timber.plant(HyperlinkedDebugTree())
         app.registerActivityLifecycleCallbacks(activityCallback)
     }
 
@@ -62,12 +74,59 @@ class BackStackFlipperPlugin(app: Application) :
      */
     override fun onConnect(connection: FlipperConnection?) {
         this.connection = connection
+        handleDesktopEvents()
+//        buildObjectTreeFilterMessage().sendObjectsFilters()
+//        buildObjectTreeMessage().sendObjectTree()
+        initSendProcess()
+    }
+
+    private fun initSendProcess() {
+        if (disposeBag.size() == 0)
+            disposeBag.addAll(
+                dataStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build().applyFilters() }
+                    //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(NEW_DATA_KEY, it) }
+                    .doOnSubscribe { buildObjectTreeMessage().sendObjectTree() }
+                    .subscribeWith(RxLogSubscriber("dataStream")),
+                eventStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build() }
+                    //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(NEW_EVENT_KEY, it) }
+                    .subscribeWith(RxLogSubscriber("eventStream")),
+                objectFilterStream
+                    .subscribeOn(Schedulers.io())
+                    .map { it.build() }
+                    //.distinctUntilChanged()
+                    .throttleFirst(DEBOUNCE_DELAY, TimeUnit.MILLISECONDS)
+                    .doOnNext { connection?.send(FILTER_OPTION_KEY, it) }
+                    // We update the tree when filters changed
+                    .doOnNext { buildObjectTreeMessage().sendObjectTree() }
+                    .doOnSubscribe { buildObjectTreeFilterMessage().sendObjectsFilters() }
+                    .subscribeWith(RxLogSubscriber("objectFilterStream")),
+            )
+    }
+
+    private fun handleDesktopEvents() {
+        connection?.run {
+            // Object Tree Filters
+            receive(FILTER_OPTION_KEY) { params, _ ->
+                Timber.tag("_objectFilterStream").d("receive : $params")
+                updateClientObjectFiltersValues(params)
+                buildObjectTreeFilterMessage().sendObjectsFilters()
+            }
+        }
     }
 
     /**
      * Release the connection
      */
     override fun onDisconnect() {
+        disposeBag.clear()
         connection = null
     }
 
@@ -78,60 +137,45 @@ class BackStackFlipperPlugin(app: Application) :
         return false
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // MAP
-    ///////////////////////////////////////////////////////////////////////////
-
-    private val activityMap = mutableMapOf<String, FlipperObject.Builder>()
-    private val fragmentMap = mutableMapOf<String, HashMap<String, FlipperObject.Builder>>()
-    private val trashMap = FlipperArray.Builder()
-    private val eventList = FlipperArray.Builder()
 
     ///////////////////////////////////////////////////////////////////////////
-    // OPTION
+    // BACK STACK
     ///////////////////////////////////////////////////////////////////////////
-
-    var optionFragments = true
-    var optionViewModels = true
-    var optionViewModelMembers = true
-        set(value) {
-            field = value
-            if (field) {
-                optionViewModels = true
-            }
-        }
-    var optionJobs = false
-    var optionServices = false
-    var optionBackStackJetPack = true
-        set(value) {
-            field = value
-            if (field) {
-                optionFragments = true
-            }
-        }
-    var optionBackStackLegacy = true
-        set(value) {
-            field = value
-            if (field) {
-                optionFragments = true
-            }
-        }
-
 
     private val backStackListener = FragmentManager.OnBackStackChangedListener {
+        Timber.d("")
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // FLIPPER TRANSMISSION
     ///////////////////////////////////////////////////////////////////////////
 
+    private fun FlipperObject.Builder.sendObjectTree() {
+        this.run { dataStream.onNext(this) }
+    }
+
+    private fun FlipperArray.Builder.sendEvent() {
+        this.run { eventStream.onNext(this) }
+    }
+
+    private fun FlipperObject.Builder.sendObjectsFilters() {
+        this.run { objectFilterStream.onNext(this) }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // OBJECT LIFE CYCLE EVENT
+    ///////////////////////////////////////////////////////////////////////////
+
     override fun pushActivityEvent(
         activity: Activity,
         event: ActivityLifeCycle
     ) {
+        if (appName == null) {
+            appName = activity.application.name
+        }
         activity
             .saveAndMapToFlipperObjectBuilder(event)
-            .send()
+            .sendObjectTree()
         activity
             .saveEvent(event)
             .sendEvent()
@@ -143,10 +187,21 @@ class BackStackFlipperPlugin(app: Application) :
     ) {
         fragment
             .saveAndMapToFlipperObjectBuilder(event)
-            .send()
+            .sendObjectTree()
         fragment
             .saveEvent(event)
             .sendEvent()
+    }
+
+    override fun pushFragmentManagerEvent(
+        fragment: Fragment,
+        fm: FragmentManager
+    ) {
+        fragment
+            .activity
+            ?.saveAndMapToFlipperObjectBuilder()
+            ?.sendObjectTree()
+
     }
 
     override fun moveToTrashAndUpdate(fragment: Fragment) {
@@ -154,138 +209,55 @@ class BackStackFlipperPlugin(app: Application) :
         fragment
             .requireActivity()
             .saveAndMapToFlipperObjectBuilder()
-            .send()
-    }
-
-    private fun FlipperObject.Builder.send() {
-        this.build().apply { connection?.send(NEW_DATA, this) }
-    }
-
-    private fun FlipperArray.Builder.sendEvent() {
-        this.build().apply { connection?.send(NEW_EVENT, this) }
-    }
-
-    private fun MutableMap<String, HashMap<String, FlipperObject.Builder>>.toFlipperObjectBuilder(): FlipperObject.Builder {
-        val result = FlipperObject.Builder()
-        this.toSortedMap().forEach { (t, u) ->
-            val f = FlipperObject.Builder()
-            u.toSortedMap().forEach {
-                f.put(it.key, it.value)
-            }
-            result.put(t, f)
-        }
-        return result
+            .sendObjectTree()
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // ACTIVITY HELPER
+    // OBJECT TREE BUILDER
     ///////////////////////////////////////////////////////////////////////////
 
-    private fun Activity.storeActivityToMapIfNecessary() {
-        if (!activityMap.containsKey(this.fid)) {
-            activityMap[this.fid] = this.toFlipperObjectBuilder()
-        }
-    }
-
-    private fun Activity.saveAndMapToFlipperObjectBuilder(event: ActivityLifeCycle? = null): FlipperObject.Builder {
-        storeActivityToMapIfNecessary()
+    private fun buildObjectTreeMessage(): FlipperObject.Builder {
         return FlipperObject
             .Builder()
-            .put(
-                application.name,
-                FlipperObject
-                    .Builder()
-                    .put(
-                        ACTIVITIES,
-                        activityMap[this.fid]!!
-                            .addLifeCycleEvent(event)
-                            .addBackStackInfo(this)
-                            .addViewModelInfo(this)
-                            .put(FRAGMENTS, fragmentMap.toFlipperObjectBuilder())
-                            .let {
-                                FlipperObject.Builder()
-                                    .put(this.fid, it)
-
-                            }
-                            .let {
-                                FlipperObject.Builder()
-                                    .put(this.name, it)
-                                    .put(TRASH, trashMap)
-                            }
-                    )
-                    .addJobsInfo()
-                    .addServicesInfo()
-            )
-    }
-
-    private fun Activity.saveEvent(event: ActivityLifeCycle): FlipperArray.Builder {
-        return FlipperObject.Builder()
-            .put(
-                TIMESTAMP,
-                timeStampFormatter.format(System.currentTimeMillis())
-            )
-            .put(TYPE, this.type)
-            .put(NAME, this.name)
-            .put(FID, this.fid)
-            .put(LIFE_CYCLE_EVENT, event)
-            .let { eventList.put(it) }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // FRAGMENT
-    ///////////////////////////////////////////////////////////////////////////
-
-    private fun FlipperObject.Builder.storeFragmentToMapIfNecessary(fragment: Fragment): FlipperObject.Builder {
-        return this
-            .also { builder ->
-                if (!fragmentMap.containsKey(fragment.name)) {
-                    fragmentMap[fragment.name] = hashMapOf(fragment.fid to builder)
+            .let {
+                // Activities option just hide the application layer (not its content)
+                if (optionActivities) {
+                    it.addActivitiesInfo()
                 } else {
-                    fragmentMap[fragment.name]!![fragment.fid] = builder
+                    it.addFragmentsInfo()
+                }
+            }
+            .addJobsInfo()
+            .addServicesInfo()
+            .addTrashInfo()
+            .let {
+                if (optionApplication) {
+                    FlipperObject
+                        .Builder()
+                        .put(
+                            appName,
+                            it
+                        )
+                } else {
+                    // Application option just hide the application layer (not its content)
+                    it
                 }
             }
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // HELPER
+    ///////////////////////////////////////////////////////////////////////////
 
     @SuppressLint("RestrictedApi")
     private fun Fragment.saveAndMapToFlipperObjectBuilder(event: FragmentLifeCycle): FlipperObject.Builder {
-        return this
-            .toFlipperObjectBuilder()
-            .addLifeCycleEvent(event)
-            .addNavBackStack(this)
-            .addViewModelInfo(this)
-            .storeFragmentToMapIfNecessary(this)
-            .let {
-                this.requireActivity()
-                    .saveAndMapToFlipperObjectBuilder()
-            }
+        this.storeFragmentToMapIfNecessary(event)
+        return buildObjectTreeMessage()
     }
 
-    private fun Fragment.saveEvent(event: FragmentLifeCycle): FlipperArray.Builder {
-        return FlipperObject.Builder()
-            .put(
-                TIMESTAMP,
-                timeStampFormatter.format(System.currentTimeMillis())
-            )
-            .put(TYPE, this.type)
-            .put(NAME, this.name)
-            .put(FID, this.fid)
-            .put(LIFE_CYCLE_EVENT, event)
-            .let { eventList.put(it) }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // VIEWMODEL
-    ///////////////////////////////////////////////////////////////////////////
-
-    ///////////////////////////////////////////////////////////////////////////
-    // TRASH
-    ///////////////////////////////////////////////////////////////////////////
-
-    private fun Fragment.moveToTrash() {
-        trashMap.put(fragmentMap[this.name]!![this.fid])
-        fragmentMap[this.name]!!.remove(this.fid)
-        this.requireActivity()
+    private fun Activity.saveAndMapToFlipperObjectBuilder(event: ActivityLifeCycle? = null): FlipperObject.Builder {
+        storeActivityToMapIfNecessary(event)
+        return buildObjectTreeMessage()
     }
 
     ///////////////////////////////////////////////////////////////////////////

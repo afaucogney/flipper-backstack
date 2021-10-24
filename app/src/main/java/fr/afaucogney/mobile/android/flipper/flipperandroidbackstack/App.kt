@@ -11,9 +11,8 @@ import fr.afaucogney.mobile.flipper.BackStackFlipperPlugin
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-//        if (BuildConfig.DEBUG) {
+
         SoLoader.init(this, false)
-//            if (FlipperUtils.shouldEnableFlipper(this)) {
         val client: FlipperClient = AndroidFlipperClient.getInstance(this)
         with(client) {
             addPlugin(
@@ -23,10 +22,10 @@ class App : Application() {
                 )
             )
             /**
-             * initialisation of KtpFlipperPlugin with its default constructor
+             * initialisation of AndroidObjectsLifecycleFlipperPlugin with its default constructor
              */
-            addPlugin(BackStackFlipperPlugin(this@App))
+            addPlugin(BackStackFlipperPlugin(this@App, false))
             start()
         }
-            }
+    }
 }

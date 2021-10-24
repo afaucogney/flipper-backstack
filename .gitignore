@@ -113,3 +113,6 @@ hs_err_pid*
 /.idea/
 /site/
 /build/
+/flipper-plugin-lifecycle/node_modules/
+/flipper-plugin-lifecycle/.idea/
+/flipper-plugin-lifecycle/dist/

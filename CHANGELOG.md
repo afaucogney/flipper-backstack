@@ -1,6 +1,28 @@
+# 0.5.3
+- Fix crash when fragment is null (affect legacy backstack)
+
+# 0.5.2
+- Remove JCenter
+- Update README.md
+
+# 0.5.1
+- Migrate to AGP 7.0.3
+- Migrate sample App to Android 12
+- Switch to Maven-Publish plugin
+- Fix some Lint issues
+- Disable log by default (may be enable in the Plugin constructor)
+
+# 0.5.0
+- Add Legacy back-stack support, via fragment-manager (only for activity)
+- Migrate code to Rx to enable background thread
+- Add sample activity with fragment-manager
+- General optimization of filtering options
+- Migrate to Java11
+- Add Timber for logging
+
 # 0.4.1
 - Add filtering for event logs
-- Add filtering menu for object strcuture (wip)
+- Add filtering menu for object structure (wip)
 
 # 0.4.0
 - Add log side windows with events of Activities and Fragments
@@ -21,5 +43,5 @@
 
 # 0.1.0
 - First implementation
-- Add Activities
+- Add ActivitiesGener
 - Add Fragments

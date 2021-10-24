@@ -24,18 +24,25 @@ https://fbflipper.com/docs/extending/loading-custom-plugins
 ## Start flipper from source
 
 ```shell script
+git fetch
 git pull
-yarn
+cd desktop
 yarn start
 ```
+
+In case of issue : brew reinstall icu4c
+yarn install
 
 
 ## Update version on JitPack
 
-- Update version number on build.gradle
+- Update version number on build.gradle ()
 - Git commit, push
 
-- Delete binary and lock file in destkop plugin
+## Update version on Npm
+
+- Update version number on package.json
+- Delete binary and lock file in desktop plugin
 - npm install --force
 - (npm pack)
 - Git commit, push
