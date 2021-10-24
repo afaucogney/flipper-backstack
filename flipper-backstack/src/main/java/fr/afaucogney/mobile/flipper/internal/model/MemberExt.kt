@@ -3,6 +3,8 @@ package fr.afaucogney.mobile.flipper.internal.model
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import com.facebook.flipper.core.FlipperObject
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
 
@@ -37,10 +39,12 @@ internal fun ViewModel.addPublicMembers(): FlipperObject.Builder {
                                 VALUE,
                                 it.getter
                                     .call(this@addPublicMembers)
-                                    .let {
-                                        when (it) {
-                                            is LiveData<*> -> it.value
-                                            else -> it.toString()
+                                    .let { prop ->
+                                        when (prop) {
+                                            is LiveData<*> -> prop.value
+                                            is StateFlow<*> -> prop.value
+                                            is SharedFlow<*> -> prop.replayCache.toString()
+                                            else -> prop.toString()
                                         }
                                     }
                             )
