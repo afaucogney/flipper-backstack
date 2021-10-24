@@ -15,12 +15,13 @@ class NotificationsViewModel : ViewModel() {
     }
     val text: LiveData<String> = _text
 
-    private val _state = MutableStateFlow("state")
+    private val _state = MutableStateFlow("This value is from NotificationsViewModel")
     val state = _state.asStateFlow()
 
     private val _shared = MutableSharedFlow<String>(5).apply {
         repeat(10) {
-            tryEmit("shared:$it")
+            val times = it + 1
+            tryEmit("This shared value is from NotificationsViewModel: No.$times")
         }
     }
     val shared = _shared.asSharedFlow()

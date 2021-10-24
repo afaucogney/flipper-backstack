@@ -33,11 +33,11 @@ class NotificationsFragment : Fragment() {
             textView.text = it
         })
         notificationsViewModel.state.onEach {
-            textViewState.text = it
+            textViewState.text = "state value:$it"
         }.launchIn(lifecycleScope)
 
         notificationsViewModel.shared.onEach {
-            textViewShared.text = it
+            textViewShared.text = "shared value:$it"
         }.launchIn(lifecycleScope)
         return root
     }
